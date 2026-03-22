@@ -14,7 +14,9 @@ def home():
     return "Bot is Running!"
 
 def run_web():
-    web_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    # Render हमेशा एक PORT एन्वायरमेंट वेरिएबल देता है
+    port = int(os.environ.get("PORT", 8080))
+    web_app.run(host="0.0.0.0", port=port)
 
 # --- बॉट कॉन्फ़िगरेशन ---
 API_ID = 29218807
@@ -25,7 +27,7 @@ UPDATE_CHANNEL = "Sachin4Sharma1210"
 
 app = Client("yt_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# सब्सक्राइब चेक
+# सब्सक्राइब चेक करने का फंक्शन
 async def is_subscribed(client, message):
     try:
         await client.get_chat_member(UPDATE_CHANNEL, message.from_user.id)
@@ -79,15 +81,15 @@ async def download_handler(client, callback_query):
     }
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            title = info.get('title', 'Video')
+        # यहाँ 'run_in_executor' का इस्तेमाल कर रहे हैं ताकि इवेंट लूप ब्लॉक न हो
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts).download([url]))
 
         await callback_query.message.edit("📤 अपलोड हो रहा है...")
         await client.send_video(
             chat_id=callback_query.message.chat.id,
             video=file_name,
-            caption=f"**🎬 शीर्षक:** {title}\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**",
+            caption=f"**🎬 शीर्षक:** क्वालिटी - {quality}p\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**",
             supports_streaming=True
         )
         await callback_query.message.delete()
@@ -97,9 +99,19 @@ async def download_handler(client, callback_query):
         if os.path.exists(file_name):
             os.remove(file_name)
 
-# --- बॉट शुरू करने का सही तरीका (Error Fix) ---
+# --- बॉट शुरू करने का नया तरीका (Python 3.12+ Fix) ---
+async def main():
+    # Flask को अलग थ्रेड में चलाना
+    Thread(target=run_web, daemon=True).start()
+    print("Bot is starting...")
+    await app.start()
+    print("Bot is Running!")
+    # बॉट को चालू रखने के लिए
+    await asyncio.Event().wait()
+
 if __name__ == "__main__":
-    Thread(target=run_web).start()  # Flask चालू करें
-    print("Bot is Running...")
-    app.run()
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        pass
 
