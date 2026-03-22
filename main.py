@@ -7,7 +7,7 @@ import yt_dlp
 from flask import Flask
 from threading import Thread
 
-# --- Flask Server (Render के लिए) ---
+# --- Flask Server ---
 web_app = Flask(__name__)
 @web_app.route('/')
 def home():
@@ -17,9 +17,9 @@ def run_web():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
 
-# --- कॉन्फ़िगरेशन ---
-API_ID = 29218807
-API_HASH = "5de693a39423272c34457419323466a1"
+# --- कॉन्फ़िगरेशन (आपकी फोटो 1000082314.jpg से एकदम सही डेटा) ---
+API_ID = 29218807  #
+API_HASH = "5de693a39423272c34457419323466a1"  #
 BOT_TOKEN = "8441306868:AAFiY_FTmyljnldJq6da8NcESkH5hVXCiLA"
 UPDATE_CHANNEL = "Sachin4Sharma1210"
 
@@ -31,7 +31,7 @@ app = Client(
     in_memory=True 
 )
 
-# सब्सक्राइब चेक (इसे सरल बनाया गया है ताकि बोट न रुके)
+# सब्सक्राइब चेक (इसे सरल रखा गया है)
 async def is_subscribed(client, message):
     if not UPDATE_CHANNEL:
         return True
@@ -46,15 +46,13 @@ async def is_subscribed(client, message):
             ]])
         )
         return False
-    except Exception as e:
-        print(f"Subscribe Check Error: {e}")
-        return True # किसी और एरर पर बोट को चलने दें
+    except Exception:
+        return True
 
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
-    # रिप्लाई पक्का करने के लिए सीधा मैसेज
     await message.reply_text(
-        f"नमस्ते {message.from_user.first_name}!\n\nलिंक भेजें, मैं डाउनलोड कर दूँगा।\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**"
+        f"नमस्ते {message.from_user.first_name}!\n\nलिंक भेजें, मैं वीडियो डाउनलोड कर दूँगा।\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**"
     )
 
 @app.on_message(filters.regex(r"(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+") & filters.private)
@@ -62,7 +60,7 @@ async def handle_link(client, message):
     if not await is_subscribed(client, message): return
     
     url = message.text
-    sent_msg = await message.reply_text("वीडियो की जानकारी निकाली जा रही है... 🔍")
+    sent_msg = await message.reply_text("प्रोसेसिंग... ⏳")
     
     try:
         ydl_opts = {'cookiefile': 'cookies.txt', 'quiet': True}
@@ -110,7 +108,7 @@ async def download_handler(client, callback_query):
 async def main():
     Thread(target=run_web, daemon=True).start()
     await app.start()
-    print("Bot Started!")
+    print("Bot Started Successfully!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
