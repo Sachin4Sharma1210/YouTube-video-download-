@@ -7,7 +7,7 @@ import yt_dlp
 from flask import Flask
 from threading import Thread
 
-# --- Flask Server ---
+# --- Flask Server (Render के लिए) ---
 web_app = Flask(__name__)
 @web_app.route('/')
 def home():
@@ -23,7 +23,6 @@ API_HASH = "5de693a39423272c34457419323466a1"
 BOT_TOKEN = "8441306868:AAFiY_FTmyljnldJq6da8NcESkH5hVXCiLA"
 UPDATE_CHANNEL = "Sachin4Sharma1210"
 
-# यहाँ 'in_memory=True' बहुत ज़रूरी है Render के लिए
 app = Client(
     "yt_downloader",
     api_id=API_ID,
@@ -32,8 +31,10 @@ app = Client(
     in_memory=True 
 )
 
-# सब्सक्राइब चेक फंक्शन
+# सब्सक्राइब चेक (इसे सरल बनाया गया है ताकि बोट न रुके)
 async def is_subscribed(client, message):
+    if not UPDATE_CHANNEL:
+        return True
     try:
         await client.get_chat_member(UPDATE_CHANNEL, message.from_user.id)
         return True
@@ -45,14 +46,15 @@ async def is_subscribed(client, message):
             ]])
         )
         return False
-    except Exception:
-        return True
+    except Exception as e:
+        print(f"Subscribe Check Error: {e}")
+        return True # किसी और एरर पर बोट को चलने दें
 
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
-    if not await is_subscribed(client, message): return
+    # रिप्लाई पक्का करने के लिए सीधा मैसेज
     await message.reply_text(
-        f"नमस्ते {message.from_user.first_name}!\n\nयूट्यूब वीडियो की लिंक भेजें और मैं उसे डाउनलोड कर दूँगा।\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**"
+        f"नमस्ते {message.from_user.first_name}!\n\nलिंक भेजें, मैं डाउनलोड कर दूँगा।\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**"
     )
 
 @app.on_message(filters.regex(r"(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+") & filters.private)
@@ -68,12 +70,9 @@ async def handle_link(client, message):
         info = await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(url, download=False))
         
         title = info.get('title', 'Video')
-        buttons = [
-            [InlineKeyboardButton("🎥 360p", callback_data=f"dl|360|{url}")],
-            [InlineKeyboardButton("🎥 720p", callback_data=f"dl|720|{url}")]
-        ]
+        buttons = [[InlineKeyboardButton("🎥 360p", callback_data=f"dl|360|{url}")]]
         await sent_msg.edit(
-            f"**🎬 शीर्षक:** {title}\n\nनीचे से क्वालिटी चुनें:",
+            f"**🎬 शीर्षक:** {title}\n\nक्वालिटी चुनें:",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except Exception as e:
@@ -83,8 +82,7 @@ async def handle_link(client, message):
 async def download_handler(client, callback_query):
     _, quality, url = callback_query.data.split("|")
     file_name = f"video_{callback_query.from_user.id}.mp4"
-    
-    await callback_query.message.edit(f"📥 {quality}p डाउनलोड शुरू हो रहा है...")
+    await callback_query.message.edit(f"📥 {quality}p डाउनलोड शुरू...")
     
     ydl_opts = {
         'format': f'bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
@@ -96,27 +94,23 @@ async def download_handler(client, callback_query):
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts).download([url]))
-
-        await callback_query.message.edit("📤 टेलीग्राम पर अपलोड हो रहा है...")
+        await callback_query.message.edit("📤 अपलोड हो रहा है...")
         await client.send_video(
             chat_id=callback_query.message.chat.id,
             video=file_name,
-            caption=f"**🎬 वीडियो क्वालिटी:** {quality}p\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**",
+            caption=f"**🎬 क्वालिटी:** {quality}p\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**",
             supports_streaming=True
         )
         await callback_query.message.delete()
     except Exception as e:
         await callback_query.message.edit(f"❌ एरर: {str(e)}")
     finally:
-        if os.path.exists(file_name):
-            os.remove(file_name)
+        if os.path.exists(file_name): os.remove(file_name)
 
-# बॉट चालू करने का तरीका
 async def main():
     Thread(target=run_web, daemon=True).start()
-    print("बॉट शुरू हो रहा है...")
     await app.start()
-    print("बॉट चालू है!")
+    print("Bot Started!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
