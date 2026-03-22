@@ -7,7 +7,7 @@ import yt_dlp
 from flask import Flask
 from threading import Thread
 
-# --- Flask Server (Render को एक्टिव रखने के लिए) ---
+# --- Flask Server ---
 web_app = Flask(__name__)
 @web_app.route('/')
 def home():
@@ -17,14 +17,20 @@ def run_web():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
 
-# --- कॉन्फ़िगरेशन ---
+# --- कॉन्फ़िगरेशन (आपकी फोटो से अपडेटेड) ---
 API_ID = 29218807
 API_HASH = "5de693a39423272c34457419323466a1"
 BOT_TOKEN = "8441306868:AAFiY_FTmyljnldJq6da8NcESkH5hVXCiLA"
 OWNER_ID = 7850454902
 UPDATE_CHANNEL = "Sachin4Sharma1210"
 
-app = Client("yt_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client(
+    "yt_bot", 
+    api_id=API_ID, 
+    api_hash=API_HASH, 
+    bot_token=BOT_TOKEN,
+    in_memory=True # Render के लिए यह बेहतर रहता है
+)
 
 # सब्सक्राइब चेक
 async def is_subscribed(client, message):
@@ -45,7 +51,7 @@ async def is_subscribed(client, message):
 @app.on_message(filters.command("start"))
 async def start(client, message):
     if not await is_subscribed(client, message): return
-    await message.reply_text(f"नमस्ते {message.from_user.first_name}!\nयूट्यूब लिंक भेजें।\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**")
+    await message.reply_text(f"नमस्ते {message.from_user.first_name}!\nलिंक भेजें।\n\n**DOWNLOADED BY :– ➤ 𝕊𝔸ℂℍ𝕀ℕ 𝕊ℍ𝔸ℝ𝕄𝔸**")
 
 @app.on_message(filters.regex(r"(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+"))
 async def handle_link(client, message):
@@ -55,15 +61,11 @@ async def handle_link(client, message):
     
     try:
         ydl_opts = {'cookiefile': 'cookies.txt', 'quiet': True}
-        # इस हिस्से को थ्रेड में चलाना ताकि लूप एरर न आए
         loop = asyncio.get_event_loop()
         info = await loop.run_in_executor(None, lambda: yt_dlp.YoutubeDL(ydl_opts).extract_info(url, download=False))
         
         title = info.get('title', 'Video')
-        buttons = [
-            [InlineKeyboardButton("🎥 360p", callback_data=f"dl|360|{url}")],
-            [InlineKeyboardButton("🎥 720p", callback_data=f"dl|720|{url}")]
-        ]
+        buttons = [[InlineKeyboardButton("🎥 360p", callback_data=f"dl|360|{url}")]]
         await sent_msg.edit(f"**📌 शीर्षक:** {title}\n\nक्वालिटी चुनें:", reply_markup=InlineKeyboardMarkup(buttons))
     except Exception as e:
         await sent_msg.edit(f"❌ एरर: {str(e)}")
@@ -99,11 +101,10 @@ async def download_handler(client, callback_query):
         if os.path.exists(file_name):
             os.remove(file_name)
 
-# --- बॉट शुरू करने का नया तरीका (Fix for Python 3.12+) ---
 async def start_bot():
     Thread(target=run_web, daemon=True).start()
     await app.start()
-    print("Bot is Running...")
+    print("Bot is Running!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
