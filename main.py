@@ -17,7 +17,7 @@ def run_web():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
 
-# --- कॉन्फ़िगरेशन (आपकी फोटो से अपडेटेड) ---
+# --- कॉन्फ़िगरेशन (आपकी फोटो 1000082314.jpg से एकदम सही डेटा) ---
 API_ID = 29218807
 API_HASH = "5de693a39423272c34457419323466a1"
 BOT_TOKEN = "8441306868:AAFiY_FTmyljnldJq6da8NcESkH5hVXCiLA"
@@ -29,7 +29,7 @@ app = Client(
     api_id=API_ID, 
     api_hash=API_HASH, 
     bot_token=BOT_TOKEN,
-    in_memory=True # Render के लिए यह बेहतर रहता है
+    in_memory=True
 )
 
 # सब्सक्राइब चेक
